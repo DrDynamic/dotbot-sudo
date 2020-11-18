@@ -29,6 +29,7 @@ sys.path.insert(0, data['dotbot'])
 import dotbot
 from dotbot.util import module
 from dotbot.dispatcher import Dispatcher, DispatchError
+from dotbot.plugins import Clean, Create, Link, Shell
 
 for plugin in data['plugins']:
     module.load(plugin)
