@@ -14,6 +14,7 @@ class Sudo(dotbot.Plugin):
             raise ValueError('sudo cannot handle directive %s' %
                 directive)
         
+        data = [{'defaults': self._context.defaults()}] + data
         call_data = {
                 'dotbot': path.dirname(path.dirname(dotbot.__file__)),
                 'plugins': [
