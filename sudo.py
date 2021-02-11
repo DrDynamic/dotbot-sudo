@@ -47,7 +47,9 @@ class Sudo(dotbot.Plugin):
         for plugin in module.loaded_modules:
             # HACK should we compare to something other than _directive?
             if plugin.__name__ != self._directive:
-                ret.extend(iter(['--plugin', plugin.__file__]))
+                ret.extend(iter([
+                    '--plugin',
+                    path.splitext(plugin.__file__)[0] + '.py']))
         return ret
 
     def _delete_conf_file(self, conf_file):
