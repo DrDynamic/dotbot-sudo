@@ -1,6 +1,7 @@
 import subprocess, dotbot, json
 from os import path, remove
 from dotbot.util import module
+from io import open
 
 class Sudo(dotbot.Plugin):
     _directive = 'sudo'
@@ -46,7 +47,9 @@ class Sudo(dotbot.Plugin):
         for plugin in module.loaded_modules:
             # HACK should we compare to something other than _directive?
             if plugin.__name__ != self._directive:
-                ret.extend(iter(['--plugin', plugin.__file__]))
+                ret.extend(iter([
+                    '--plugin',
+                    path.splitext(plugin.__file__)[0] + '.py']))
         return ret
 
     def _delete_conf_file(self, conf_file):
@@ -62,4 +65,8 @@ class Sudo(dotbot.Plugin):
     def _write_conf_file(self, conf_file, data):
         self._delete_conf_file(conf_file)
         with open(conf_file, 'w', encoding='utf-8') as jfile:
-            json.dump(data, jfile, ensure_ascii=False)
+            my_json_str = json.dumps(data, ensure_ascii=False)
+            if isinstance(my_json_str, str):
+                my_json_str = my_json_str.encode().decode("utf-8")
+
+            jfile.write(my_json_str)
