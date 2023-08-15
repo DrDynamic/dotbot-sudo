@@ -1,7 +1,9 @@
 import subprocess, dotbot, json
+from sys import argv
 from os import path, remove
 from dotbot.util import module
 from io import open
+
 
 class Sudo(dotbot.Plugin):
     _directive = 'sudo'
@@ -22,11 +24,15 @@ class Sudo(dotbot.Plugin):
 
         self._write_conf_file(sudo_conf, data)
 
+        args = Sudo.strip_args(argv)
+        self._log.debug(
+            'sudo: stripped arguments from parent process: {}'.format(args))
+
         proc_args = [
             'sudo', app,
             '--base-directory', base_directory,
             '--config-file', sudo_conf
-            ] + plugins
+            ] + plugins + args
         self._log.debug('sudo: args to pass: {}'.format(proc_args))
 
         try:
@@ -70,3 +76,32 @@ class Sudo(dotbot.Plugin):
                 my_json_str = my_json_str.encode().decode("utf-8")
 
             jfile.write(my_json_str)
+
+    @staticmethod
+    def strip_args(args):
+        single_args_filter = [
+            '--version',
+            '-h', '--help'
+        ]
+
+        double_args_filter = [
+            '-d', '--base-directory',
+            '-c', '--config-file',
+            '-p', '--plugin', '--plugin-dir'
+        ]
+
+        args_filter = single_args_filter + double_args_filter
+        stripped = list()
+        skip = False
+
+        for _, arg in enumerate(args):
+            if skip:
+                skip = False
+                continue
+
+            if arg in args_filter:
+                skip = arg in double_args_filter
+            elif "bin/dotbot" not in arg:
+                stripped.append(arg)
+
+        return stripped
