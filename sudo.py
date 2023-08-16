@@ -1,7 +1,8 @@
 import subprocess, dotbot, json
-from os import path, remove
+from os import path, remove, close, unlink
 from dotbot.util import module
 from io import open
+from tempfile import mkstemp
 
 class Sudo(dotbot.Plugin):
     _directive = 'sudo'
@@ -18,29 +19,35 @@ class Sudo(dotbot.Plugin):
         base_directory = self._context.base_directory()
         data = [{'defaults': self._context.defaults()}] + data
         plugins = self._collect_plugins()
-        sudo_conf = path.join(path.dirname(__file__), 'sudo.conf.json')
-
-        self._write_conf_file(sudo_conf, data)
-
-        proc_args = [
-            'sudo', app,
-            '--base-directory', base_directory,
-            '--config-file', sudo_conf
-            ] + plugins
-        self._log.debug('sudo: args to pass: {}'.format(proc_args))
 
         try:
-            self._log.lowinfo('sudo: begin subprocess')
-            subprocess.check_call(
-                proc_args,
-                stdin=subprocess.PIPE)
-            self._log.lowinfo('sudo: end subprocess')
-            self._delete_conf_file(sudo_conf)
-            return True
-        except subprocess.CalledProcessError as e:
-            self._log.lowinfo('sudo: end subprocess')
-            self._log.error(e)
-            return False
+            fd, sudo_conf = mkstemp(prefix='dotbot-sudo.', suffix='.json')
+            self._log.debug('sudo: temporary config path: {}'.format(sudo_conf))
+            self._write_conf_file(sudo_conf, data)
+
+            proc_args = [
+                'sudo', app,
+                '--base-directory', base_directory,
+                '--config-file', sudo_conf
+                ] + plugins
+            self._log.debug('sudo: args to pass: {}'.format(proc_args))
+
+            try:
+                self._log.lowinfo('sudo: begin subprocess')
+                subprocess.check_call(
+                    proc_args,
+                    stdin=subprocess.PIPE)
+                self._log.lowinfo('sudo: end subprocess')
+                self._delete_conf_file(sudo_conf)
+                return True
+            except subprocess.CalledProcessError as e:
+                self._log.lowinfo('sudo: end subprocess')
+                self._log.error(e)
+                return False
+        finally:
+            self._log.debug('sudo: garbage collecting: {}'.format(sudo_conf))
+            close(fd)
+            unlink(fd)
 
     def _collect_plugins(self):
         ret = []
